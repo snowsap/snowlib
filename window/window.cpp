@@ -1,6 +1,5 @@
 #include "window.h"
 
-
 /**
  * @param width Width of the window.
  * @param height Height of the window.
@@ -23,8 +22,7 @@ bool doFloat/* should the window be able to be put behind others */,
 bool fullScreen/* if the window should be on full screen recommended to have resize to monitor if true*/,
 bool resizeToMonitor/* resizes the window to the dimensions of the monitor displaying it */,
 bool windowDecorated /* if the window should have exit sides exit button ect. to achieve borderless fullscreen (fullscreen false, resizeToMonitor true, decorated false, resizeable false) */,
-int displayNumber  /* what display to put the window */)
-	{
+int displayNumber  /* what display to put the window */) {
 	this->width = width;
 	this->height = height;
 	this->windowName = windowName;
@@ -82,11 +80,13 @@ int displayNumber  /* what display to put the window */)
 		std::cout << "Failed to initialize GLAD" << std::endl;
 		return;
 	}
-
+	
+	// creates a shader instance responseable for holding the shaders are displaying the infomation.
+	unsigned int shaderProgram = glCreateProgram();
 
 	// create the vertex shader source to be used as the vertex shader ( refer to openGL documentation under "vertex shader" )
 	const GLchar* vertShaderSource = readFile("../shaders/vertex.glsl").c_str();
-
+	
 	// creates a vertex shader address for referencing
 	unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	
@@ -95,6 +95,24 @@ int displayNumber  /* what display to put the window */)
 	
 	// compiles it to useable infomation
 	glCompileShader(vertexShader);
+
+	// attaches the shader to the actual program
+	glAttachShader(shaderProgram, vertexShader);
+
+	// sources the shader
+	const GLchar* fragShaderSource = readFile("../shaders/fragment.glsl").c_str();
+
+	// creates a shader on the memory
+	unsigned int fragShader = glCreateShader(GL_FRAGMENT_SHADER);
+
+	// assigns the shader propeties
+	glShaderSource(fragShader, 1, &vertShaderSource, NULL);
+
+	// deleting shaders to free memory ( minor peformance hit but good for future changes that may include a large shader"
+	glDeleteShader(vertexShader);
+
+	// adds the shader to the instance of the shader program  
+	glAttachShader(shaderProgram, vertexShader);
 
 }
 

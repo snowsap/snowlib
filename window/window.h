@@ -4,7 +4,6 @@
 #include "fstream"
 #include "sstream"
 
-#pragma once
 
 class window {
 protected:
@@ -58,6 +57,5 @@ private:
 
 	void processInputMethod(GLFWwindow* windowInstance);
 
-	std::string readFile(const std::string& fileName);
-
+	static const std::string readFile(const std::string& fileAddress);
 };
