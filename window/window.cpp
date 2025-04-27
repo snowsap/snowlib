@@ -1,4 +1,5 @@
 #include "window.h"
+#include <filesystem>
 
 /**
  * @param width Width of the window.
@@ -82,49 +83,65 @@ int displayNumber  /* what display to put the window */) {
 	}
 	
 	// creates a shader instance responseable for holding the shaders are displaying the infomation.
-	unsigned int shaderProgram = glCreateProgram();
+	this->shaderProgram = glCreateProgram();
 
-	// create the vertex shader source to be used as the vertex shader ( refer to openGL documentation under "vertex shader" )
-	const GLchar* vertShaderSource = readFile("../shaders/vertex.glsl").c_str();
+
+	std::string fragShaderSource = this->readFile("shaders/fragment.glsl");
+	std::string vertShaderSource = this->readFile("shaders/vertex.glsl");
+
+
+	unsigned int vertexShader =	this->createShader(vertShaderSource, GL_VERTEX_SHADER, this->shaderProgram);
+	unsigned int fragmentShader = this->createShader(fragShaderSource, GL_FRAGMENT_SHADER, this->shaderProgram);
+
+	glAttachShader(this->shaderProgram, vertexShader);
+	glAttachShader(this->shaderProgram, fragmentShader);
+		
+	glValidateProgram(this->shaderProgram);
 	
-	// creates a vertex shader address for referencing
-	unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	float positions[] = {
+	0.5f, -0.5f,
+	-0.5f, -0.5f,
+	0.0f, 0.5f,
+	1.0f, 0.0f,
+	};
+
 	
-	// adds the vertex shader source code to the referencing address of the vertex shader 
-	glShaderSource(vertexShader, 1, &vertShaderSource, NULL);
+	glGenVertexArrays(1, &this->vao);
+	glBindVertexArray(this->vao);
+
+	unsigned int buffer;
+	glGenBuffers(1, &buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, buffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
 	
-	// compiles it to useable infomation
-	glCompileShader(vertexShader);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (void*)0);
+	glEnableVertexAttribArray(0);
+	
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-	// attaches the shader to the actual program
-	glAttachShader(shaderProgram, vertexShader);
+	this->renderInstance = render();
+	glBindVertexArray(0);
 
-	// sources the shader
-	const GLchar* fragShaderSource = readFile("../shaders/fragment.glsl").c_str();
-
-	// creates a shader on the memory
-	unsigned int fragShader = glCreateShader(GL_FRAGMENT_SHADER);
-
-	// assigns the shader propeties
-	glShaderSource(fragShader, 1, &vertShaderSource, NULL);
-
-	// deleting shaders to free memory ( minor peformance hit but good for future changes that may include a large shader"
-	glDeleteShader(vertexShader);
-
-	// adds the shader to the instance of the shader program  
-	glAttachShader(shaderProgram, vertexShader);
 
 }
 
-void window::framebuffer_size_callback(GLFWwindow* windowInstance, int width, int height) {
-	glViewport(0, 0, width, height);
-}
+void window::framebuffer_size_callback(GLFWwindow* windowInstance, int width, int height) {}
 
-void window::render() {
+void window::renderScreen() {
 	this->processInputMethod(this->windowInstance);
+	glUseProgram(this->shaderProgram);
+	
+	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glBindVertexArray(this->vao);
+
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 5);
 	
 	glfwSwapBuffers(this->windowInstance);
 	glfwPollEvents();
+
+
+
 }
 
 void window::processInputMethod(GLFWwindow* windowInstance) {
@@ -132,7 +149,7 @@ void window::processInputMethod(GLFWwindow* windowInstance) {
 
 }
 
-const std::string window::readFile( const std::string& fileAddress) {
+std::string window::readFile(const std::string& fileAddress) {
 
 	std::ifstream givenFile(fileAddress);
 
@@ -144,4 +161,41 @@ const std::string window::readFile( const std::string& fileAddress) {
 
 	return ss.str();
 
+}
+
+unsigned int window::createShader(const std::string& shaderText, unsigned int shaderType, unsigned int shaderProgram) {
+	unsigned int shaderID = glCreateShader(shaderType);
+	const char* sourceString = shaderText.c_str();
+	glShaderSource(shaderID, 1, &sourceString, NULL);
+	glCompileShader(shaderID);
+
+	int success;
+	char infoLog[1024];
+	glGetShaderiv(shaderID, GL_COMPILE_STATUS, &success);
+	if (!success) {
+		glGetShaderInfoLog(shaderID, 512, NULL, infoLog);
+		std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog<< std::endl;
+	}
+	return shaderID;
+}
+
+int window::changeTheDimensions(int width, int height) {
+	
+	if (width == -1) {
+		width = this->width;
+	}
+	if (height == -1) {
+		height = this->height;
+	}
+	glfwSetWindowSize(this->windowInstance, width, height);
+	return 0;
+}
+
+int addATriangle(int pos1, int pos2, int pos3) {
+	
+
+
+
+
+	return 0;
 }
