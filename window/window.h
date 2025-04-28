@@ -2,6 +2,7 @@
 
 
 class window {
+
 protected:
 	int width;
 	int height;
@@ -17,13 +18,12 @@ protected:
 	render renderInstance;
 	unsigned int shaderProgram;
 	unsigned int vao;
-	float positions[];
-
-
-
 
 
 public:
+
+
+	std::vector<std::vector<float*>> pixels;
 
 	/**
 	 * @param width Width of the window.
@@ -65,6 +65,7 @@ private:
 
 	unsigned int createShader(const std::string& shaderText, unsigned int shaderType, unsigned int shaderProgram);
 
-	int addATriangle(int pos1, int pos2, int pos3);
-	
+	void initTestPixels();
+
+	void screenCover();
 };

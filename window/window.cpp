@@ -82,66 +82,76 @@ int displayNumber  /* what display to put the window */) {
 		return;
 	}
 	
-	// creates a shader instance responseable for holding the shaders are displaying the infomation.
-	this->shaderProgram = glCreateProgram();
+	screenCover();
 
-
-	std::string fragShaderSource = this->readFile("shaders/fragment.glsl");
-	std::string vertShaderSource = this->readFile("shaders/vertex.glsl");
-
-
-	unsigned int vertexShader =	this->createShader(vertShaderSource, GL_VERTEX_SHADER, this->shaderProgram);
-	unsigned int fragmentShader = this->createShader(fragShaderSource, GL_FRAGMENT_SHADER, this->shaderProgram);
-
-	glAttachShader(this->shaderProgram, vertexShader);
-	glAttachShader(this->shaderProgram, fragmentShader);
-		
-	glValidateProgram(this->shaderProgram);
-	
-	float positions[] = {
-	0.5f, -0.5f,
-	-0.5f, -0.5f,
-	0.0f, 0.5f,
-	1.0f, 0.0f,
-	};
-
-	
-	glGenVertexArrays(1, &this->vao);
-	glBindVertexArray(this->vao);
-
-	unsigned int buffer;
-	glGenBuffers(1, &buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, buffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
-	
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (void*)0);
-	glEnableVertexAttribArray(0);
-	
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	this->renderInstance = render();
-	glBindVertexArray(0);
-
+	initTestPixels();
 
 }
 
 void window::framebuffer_size_callback(GLFWwindow* windowInstance, int width, int height) {}
 
 void window::renderScreen() {
-	this->processInputMethod(this->windowInstance);
-	glUseProgram(this->shaderProgram);
 	
+	this->processInputMethod(this->windowInstance);
+
+	glUseProgram(this->shaderProgram);
+
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
+
+
 	glBindVertexArray(this->vao);
 
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 5);
-	
 	glfwSwapBuffers(this->windowInstance);
 	glfwPollEvents();
 
 
 
+}
+
+void window::screenCover() {
+
+	this->shaderProgram = glCreateProgram();
+
+
+	std::string fragShaderSource = this->readFile("shaders/fragment.glsl");
+	std::string vertShaderSource = this->readFile("shaders/vertex.glsl");
+
+	unsigned int vertexShader = this->createShader(vertShaderSource, GL_VERTEX_SHADER, this->shaderProgram);
+	unsigned int fragmentShader = this->createShader(fragShaderSource, GL_FRAGMENT_SHADER, this->shaderProgram);
+
+	glAttachShader(this->shaderProgram, vertexShader);
+	glAttachShader(this->shaderProgram, fragmentShader);
+
+	float screenCover[]{
+		-1.0f, -1.0f,
+		0.0f, -1.0f,
+		-1.0f, 0.0f,
+		1.0f, 1.0f
+	};
+
+	unsigned int screenCoverIndex[]{
+		1, 2, 3,
+		4, 2, 3
+	};
+
+	glGenVertexArrays(1, &this->vao);
+	glBindVertexArray(this->vao);
+
+	unsigned int screenCoverBuffer;
+	glGenBuffers(1, &screenCoverBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, screenCoverBuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(screenCover), screenCover, GL_STATIC_DRAW);
+
+	unsigned int screenCoverIndexBuffer;
+	glGenBuffers(1, &screenCoverIndexBuffer);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, screenCoverIndexBuffer);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(screenCoverIndex), screenCoverIndex, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (void*)0);
+	glEnableVertexAttribArray(0);
+
+	glValidateProgram(this->shaderProgram);
 }
 
 void window::processInputMethod(GLFWwindow* windowInstance) {
@@ -191,11 +201,24 @@ int window::changeTheDimensions(int width, int height) {
 	return 0;
 }
 
-int addATriangle(int pos1, int pos2, int pos3) {
-	
+void window::initTestPixels() {
+
+	float blackColor[]{
+	0.0f, 0.0f, 0.0f, 1.0f
+	};
 
 
+	for (int x = 0; x < this->height; ++x) {
+		for (int y = 0; y < this->height; ++y) {
+			this->pixels[x][y] = blackColor;
+		}
+	}
+
+	float nonBlackColor[]{
+		0.5f, 0.5f, 0.5f, 0.5f
+	};
 
 
-	return 0;
+	this->pixels[100][100] = nonBlackColor;
+	return;
 }
