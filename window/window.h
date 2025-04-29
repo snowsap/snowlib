@@ -18,13 +18,13 @@ protected:
 	render renderInstance;
 	unsigned int shaderProgram;
 	unsigned int vao;
+	unsigned int textureID;
 
 
 public:
 
 
-	std::vector<std::vector<float*>> pixels;
-
+	std::vector<unsigned char> pixels;
 	/**
 	 * @param width Width of the window.
 	 * @param height Height of the window.
@@ -37,7 +37,7 @@ public:
 	 * @param windowDecorated If the window should have borders, an exit button, etc. (For borderless fullscreen: set fullScreen = false, resizeToMonitor = true, windowDecorated = false, resizeable = false).
 	 * @param displayNumber The display number where the window should be shown.
 	 */
-	window (
+	window(
 		int width,
 		int height,
 		std::string windowName = "un-named",
@@ -47,7 +47,7 @@ public:
 		bool fullScreen = false,
 		bool resizeToMonitor = false,
 		bool windowDecorated = true,
-		int displayNumber = 0 );
+		int displayNumber = 0);
 	/**
 	* @param width width to change to, input -1 to not change.
 	* @param hight height to change to, input -1 to not change.
@@ -60,7 +60,7 @@ private:
 	static void framebuffer_size_callback(GLFWwindow* windowInstance, int width, int height);
 
 	void processInputMethod(GLFWwindow* windowInstance);
-	 
+
 	std::string readFile(const std::string& fileAddress);
 
 	unsigned int createShader(const std::string& shaderText, unsigned int shaderType, unsigned int shaderProgram);

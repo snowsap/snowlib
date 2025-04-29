@@ -84,27 +84,31 @@ int displayNumber  /* what display to put the window */) {
 	
 	screenCover();
 
-	initTestPixels();
 
 }
 
-void window::framebuffer_size_callback(GLFWwindow* windowInstance, int width, int height) {}
+void window::framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+	glViewport(0, 0, width, height);
+}
+
 
 void window::renderScreen() {
 	
-	this->processInputMethod(this->windowInstance);
+	processInputMethod(this->windowInstance);
 
 	glUseProgram(this->shaderProgram);
+	glUniform1i(glGetUniformLocation(this->shaderProgram, "textureSampler"), 0);
 
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
-
-
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, this->textureID);
 	glBindVertexArray(this->vao);
+
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 	glfwSwapBuffers(this->windowInstance);
 	glfwPollEvents();
-
 
 
 }
@@ -112,47 +116,62 @@ void window::renderScreen() {
 void window::screenCover() {
 
 	this->shaderProgram = glCreateProgram();
+	auto vs = createShader(readFile("shaders/vertex.glsl"), GL_VERTEX_SHADER, shaderProgram);
+	auto fs = createShader(readFile("shaders/fragment.glsl"), GL_FRAGMENT_SHADER, shaderProgram);
+	glAttachShader(shaderProgram, vs);
+	glAttachShader(shaderProgram, fs);
+	glLinkProgram(shaderProgram);
+
+	glValidateProgram(shaderProgram);
+	glUseProgram(shaderProgram);
 
 
-	std::string fragShaderSource = this->readFile("shaders/fragment.glsl");
-	std::string vertShaderSource = this->readFile("shaders/vertex.glsl");
-
-	unsigned int vertexShader = this->createShader(vertShaderSource, GL_VERTEX_SHADER, this->shaderProgram);
-	unsigned int fragmentShader = this->createShader(fragShaderSource, GL_FRAGMENT_SHADER, this->shaderProgram);
-
-	glAttachShader(this->shaderProgram, vertexShader);
-	glAttachShader(this->shaderProgram, fragmentShader);
-
-	float screenCover[]{
-		-1.0f, -1.0f,
-		0.0f, -1.0f,
-		-1.0f, 0.0f,
-		1.0f, 1.0f
+	float verts[] = {
+		-1, -1,     0,   0,
+		 1, -1,     1,   0,
+		-1,  1,     0,   1,
+		 1,  1,     1,   1,
 	};
+	unsigned int idx[] = { 0,1,2,  3,1,2 };
 
-	unsigned int screenCoverIndex[]{
-		1, 2, 3,
-		4, 2, 3
-	};
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
 
-	glGenVertexArrays(1, &this->vao);
-	glBindVertexArray(this->vao);
+	unsigned int vbo, ebo;
+	glGenBuffers(1, &vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
 
-	unsigned int screenCoverBuffer;
-	glGenBuffers(1, &screenCoverBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, screenCoverBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(screenCover), screenCover, GL_STATIC_DRAW);
+	glGenBuffers(1, &ebo);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(idx), idx, GL_STATIC_DRAW);
 
-	unsigned int screenCoverIndexBuffer;
-	glGenBuffers(1, &screenCoverIndexBuffer);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, screenCoverIndexBuffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(screenCoverIndex), screenCoverIndex, GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (void*)0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
-	glValidateProgram(this->shaderProgram);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+
+
+	initTestPixels();  
+	glGenTextures(1, &textureID);
+	glBindTexture(GL_TEXTURE_2D, textureID);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, this->pixels.data());
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+	float borderColor[] = { 0,0,1,1 };
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	
+	glBindVertexArray(0);
 }
+
 
 void window::processInputMethod(GLFWwindow* windowInstance) {
 
@@ -203,22 +222,28 @@ int window::changeTheDimensions(int width, int height) {
 
 void window::initTestPixels() {
 
-	float blackColor[]{
-	0.0f, 0.0f, 0.0f, 1.0f
+	unsigned char blackColor[]{
+	0, 255, 255, 255
 	};
 
+	std::vector<unsigned char> allPixels(this->height * this->width * 4);
 
-	for (int x = 0; x < this->height; ++x) {
-		for (int y = 0; y < this->height; ++y) {
-			this->pixels[x][y] = blackColor;
-		}
+	this->pixels.resize(this->width * this->height * 4);
+	for (int x = 0; x < this->width * this->height * 4; ++x) {
+		this->pixels[x] = blackColor[x % 4];
 	}
 
-	float nonBlackColor[]{
-		0.5f, 0.5f, 0.5f, 0.5f
-	};
+	unsigned char nonBlackColor[]{
+		255, 255, 255, 255
+	};	
+
+	this->pixels[100] = nonBlackColor[0];
+	this->pixels[101] = nonBlackColor[1];
+	this->pixels[102] = nonBlackColor[2];
+	this->pixels[103] = nonBlackColor[3];
 
 
-	this->pixels[100][100] = nonBlackColor;
+
+
 	return;
 }
