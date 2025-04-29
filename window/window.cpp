@@ -1,6 +1,7 @@
 #include "window.h"
 #include <filesystem>
 
+
 /**
  * @param width Width of the window.
  * @param height Height of the window.
