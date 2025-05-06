@@ -1,5 +1,5 @@
 #include "render/render.h"
-
+#include "chrono"
 
 class window {
 
@@ -19,10 +19,34 @@ protected:
 	unsigned int shaderProgram;
 	unsigned int vao;
 	unsigned int textureID;
+	float constantOfViscosity;
+	int targetFrameRate = 60;
+
+
+	struct vec2 {
+		float x;
+		float y;
+	};
+
+	struct vec4 {
+		float x;
+		float y;
+		float z;
+		float a;
+	};
+
+	struct pixelInfo {
+		float density = 1;
+		vec2 velocity = {0.0f, 0.0f};
+	};
+
+	std::vector<pixelInfo> allPixelInfo{ pixelInfo{} };
 
 
 public:
 
+	std::chrono::duration<double, std::milli> frameDuration = std::chrono::duration<double, std::milli>(1000.0 / 60);
+	std::chrono::steady_clock::time_point previousTime = std::chrono::high_resolution_clock::now();
 
 	std::vector<unsigned char> pixels;
 	/**
@@ -68,4 +92,22 @@ private:
 	void initTestPixels();
 
 	void screenCover();
+
+	/**
+	* @param x0 return value target as well as the passing value
+	* @param x1 passing value (x - 1)
+	* @param x2 passing value (x + 1)
+	* @param y1 passing value (y - 1)
+	* @param y2 passing value (y + 1)
+	*/
+	float approxTheDiff(float x0, float x1, float x2, float y1, float y2, float constant);
+
+	void diffusion();
+
+	void addVection();
+
+	void computeCurl2D();
+
+	int dotProduct(vec2 vector1, vec2 vector2);
+
 };
