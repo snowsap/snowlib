@@ -1,5 +1,7 @@
 #include "render/render.h"
 #include "chrono"
+#include "unordered_set"
+#include "matrixOperations/matrixOp.h"
 
 class window {
 
@@ -19,8 +21,9 @@ protected:
 	unsigned int shaderProgram;
 	unsigned int vao;
 	unsigned int textureID;
-	float constantOfViscosity;
+	float constantOfViscosity = 0.2;
 	int targetFrameRate = 60;
+	int halfSize = 5;
 
 
 	struct vec2 {
@@ -29,10 +32,16 @@ protected:
 	};
 
 	struct vec4 {
-		float x;
-		float y;
-		float z;
+		float r;
+		float g;
+		float b;
 		float a;
+	};
+
+	struct vec3 {
+		float r;
+		float b;
+		float g;
 	};
 
 	struct pixelInfo {
@@ -40,15 +49,29 @@ protected:
 		vec2 velocity = {0.0f, 0.0f};
 	};
 
-	std::vector<pixelInfo> allPixelInfo{ pixelInfo{} };
-
+	enum accessPixelEnum {
+		up = 0,
+		left = 1,
+		right = 2,
+		down = 3,
+	};
+	
+	enum pixelInfoEnum {
+		density = 1,
+		velocityX = 2,
+		velocityY = 3
+	};
+	
+	
+	std::vector<pixelInfo> allPixelInfo{ pixelInfo{0.25, {0, 0}} };
+	vec2 mousePos{0,0};
 
 public:
 
 	std::chrono::duration<double, std::milli> frameDuration = std::chrono::duration<double, std::milli>(1000.0 / 60);
 	std::chrono::steady_clock::time_point previousTime = std::chrono::high_resolution_clock::now();
 
-	std::vector<unsigned char> pixels;
+	std::vector<unsigned char> pixels{0};
 	/**
 	 * @param width Width of the window.
 	 * @param height Height of the window.
@@ -106,8 +129,17 @@ private:
 
 	void addVection();
 
-	void computeCurl2D();
-
 	int dotProduct(vec2 vector1, vec2 vector2);
 
+	void mapDensityToPx();
+
+	void mousePointerAddVelocity();
+
+	void flipImageVertically(int width, int height);
+
+	void addVection2();
+
+	void solveHelmholtzEquation();
+
+	float accessPixel(accessPixelEnum pixel, uint16_t referencePixel, pixelInfoEnum accessValue);
 };
