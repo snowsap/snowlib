@@ -21,7 +21,7 @@ protected:
 	unsigned int shaderProgram;
 	unsigned int vao;
 	unsigned int textureID;
-	float constantOfViscosity = 0.2;
+	float constantOfViscosity = 1;
 	int targetFrameRate = 60;
 	int halfSize = 5;
 
@@ -46,7 +46,7 @@ protected:
 
 	struct pixelInfo {
 		float density = 1;
-		vec2 velocity = {0.0f, 0.0f};
+		vec2 velocity = {0.0f, 5.0f};
 	};
 
 	enum accessPixelEnum {
@@ -54,6 +54,7 @@ protected:
 		left = 1,
 		right = 2,
 		down = 3,
+		none = 4
 	};
 	
 	enum pixelInfoEnum {
@@ -65,6 +66,7 @@ protected:
 	
 	std::vector<pixelInfo> allPixelInfo{ pixelInfo{0.25, {0, 0}} };
 	vec2 mousePos{0,0};
+	int totalPixelAmount;
 
 public:
 
@@ -116,14 +118,6 @@ private:
 
 	void screenCover();
 
-	/**
-	* @param x0 return value target as well as the passing value
-	* @param x1 passing value (x - 1)
-	* @param x2 passing value (x + 1)
-	* @param y1 passing value (y - 1)
-	* @param y2 passing value (y + 1)
-	*/
-	float approxTheDiff(float x0, float x1, float x2, float y1, float y2, float constant);
 
 	void diffusion();
 
@@ -137,9 +131,9 @@ private:
 
 	void flipImageVertically(int width, int height);
 
-	void addVection2();
-
 	void solveHelmholtzEquation();
 
-	float accessPixel(accessPixelEnum pixel, uint16_t referencePixel, pixelInfoEnum accessValue);
+	float accessPixel(accessPixelEnum pixelDirection, uint16_t referencePixel, pixelInfoEnum accessValue, std::vector<pixelInfo>* pixelArray);
+
+	float approxTheDiff(float x0, float x2, float y0, float y1, float k, float oldTarg);
 };
