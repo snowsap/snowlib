@@ -115,6 +115,8 @@ void window::renderScreen() {
 
 	this->mousePointerAddVelocity();
 
+	this->addVectionVel();
+
 	this->addVection();
 
 	this->diffusion();
@@ -287,7 +289,6 @@ void window::diffusion() {
 			for (int x = 0; x < this->width; ++x) {
 
 				int i = y * this->width + x;
-
 				newAllPixelInfo[i].density = this->approxTheDiff(
 					this->accessPixel(left, i, density, &newAllPixelInfo),
 					this->accessPixel(right, i, density, &newAllPixelInfo),
@@ -295,51 +296,58 @@ void window::diffusion() {
 					this->accessPixel(down, i, density, &newAllPixelInfo),
 					this->constantOfViscosity,
 					this->accessPixel(none, i, density, &oldPixelInfo));
+				newAllPixelInfo[i].velocity.x = this->approxTheDiff(
+					this->accessPixel(left, i, velocityX, &newAllPixelInfo),
+					this->accessPixel(right, i, velocityX, &newAllPixelInfo),
+					this->accessPixel(up, i, velocityX, &newAllPixelInfo),
+					this->accessPixel(down, i, velocityX, &newAllPixelInfo),
+					this->constantOfViscosity,
+					this->accessPixel(none, i, velocityX, &oldPixelInfo));
+				newAllPixelInfo[i].velocity.y = this->approxTheDiff(
+					this->accessPixel(left, i, velocityY, &newAllPixelInfo),
+					this->accessPixel(right, i, velocityY, &newAllPixelInfo),
+					this->accessPixel(up, i, velocityY, &newAllPixelInfo),
+					this->accessPixel(down, i, velocityY, &newAllPixelInfo),
+					this->constantOfViscosity,
+					this->accessPixel(none, i, velocityY, &oldPixelInfo));
 			}
 		}
+		swap(allPixelInfo, oldPixelInfo);
 	}
 	this->allPixelInfo = std::move(newAllPixelInfo);
 	return;
 }
 
-
 void window::mousePointerAddVelocity() {
 	std::vector<pixelInfo> newAllPixelInfo = this->allPixelInfo;
 	double xPos, yPos;
 	glfwGetCursorPos(this->windowInstance, &xPos, &yPos);
-	if (false == true) {
-		int centerX = static_cast<int>(xPos);
-		int centerY = static_cast<int>(yPos);
+	int centerX = static_cast<int>(xPos);
+	int centerY = static_cast<int>(yPos);
 
-		vec2 mouseVelocity = {
-			static_cast<float>(mousePos.x - xPos),
-			static_cast<float>(mousePos.y - yPos)
-		};
+	vec2 mouseVelocity = {
+		static_cast<float>(mousePos.x - xPos),
+		static_cast<float>(mousePos.y - yPos)
+	};
 
-		for (int y = -this->halfSize; y <= this->halfSize; ++y) {
-			for (int x = -this->halfSize; x <= this->halfSize; ++x) {
-				int px = centerX + x;
-				int py = centerY + y;
+	for (int y = -this->halfSize; y <= this->halfSize; ++y) {
+		for (int x = -this->halfSize; x <= this->halfSize; ++x) {
+			int px = centerX + x;
+			int py = centerY + y;
 
-				if ((px < 0) || (px >= this->width) || (py < 0) || (py >= this->height))
-					continue;
+			if ((px < 0) || (px >= this->width) || (py < 0) || (py >= this->height))
+				continue;
 
-				int index = py * this->width + px;
-				newAllPixelInfo[index].velocity.x += mouseVelocity.x;
-				newAllPixelInfo[index].velocity.y += mouseVelocity.y;
+			int index = py * this->width + px;
+			newAllPixelInfo[index].velocity.x += mouseVelocity.x;
+			newAllPixelInfo[index].velocity.y += mouseVelocity.y;
 
-				newAllPixelInfo[index].density += 10;
-			}
+			newAllPixelInfo[index].density += 10;
 		}
-		std::cout << mouseVelocity.x << std::endl;
-		std::cout << mouseVelocity.y << std::endl;
-
-		this->mousePos.x = static_cast<float>(xPos);
-		this->mousePos.y = static_cast<float>(yPos);
-
-		this->allPixelInfo = std::move(newAllPixelInfo);
 	}
-	newAllPixelInfo[xPos + yPos * this->width].density = 100;
+	this->mousePos.x = static_cast<float>(xPos);
+	this->mousePos.y = static_cast<float>(yPos);
+
 	this->allPixelInfo = std::move(newAllPixelInfo);
 }
 
@@ -380,7 +388,7 @@ void window::flipImageVertically(int width, int height) {
 
 
 
-float window::accessPixel(accessPixelEnum pixelDirection, uint16_t referencePixel, pixelInfoEnum accessValue, std::vector<pixelInfo> *pixelArray) {
+float window::accessPixel(accessPixelEnum pixelDirection, int referencePixel, pixelInfoEnum accessValue, std::vector<pixelInfo> *pixelArray) {
 
 	switch (pixelDirection) {
 	case window::up:
@@ -402,7 +410,7 @@ float window::accessPixel(accessPixelEnum pixelDirection, uint16_t referencePixe
 		break;
 	
 	case window::right:
-		if (referencePixel % this->width == 1) {
+		if (referencePixel % this->width == this->width - 1) {
 			return -1;
 		}
 
@@ -410,15 +418,16 @@ float window::accessPixel(accessPixelEnum pixelDirection, uint16_t referencePixe
 		break;
 	
 	case window::down:
-		if ((referencePixel + this->width) > this->totalPixelAmount) {
+		referencePixel = referencePixel + this->width;
+		if (referencePixel >= this->totalPixelAmount - 1) {
 			return -1;
 		}
-		referencePixel = referencePixel + this->width;
 		break;
 	case window::none:
 		break;
 	
 	default:
+		std::cout << "broken";
 		return -1;
 		break;
 	}
@@ -471,6 +480,41 @@ void window::addVection() {
 			float lerp2Val = std::lerp(this->allPixelInfo[newIndexfloorY].density, this->allPixelInfo[newIndexfloorXY].density, relPosx);
 			float lerp3Val = std::lerp(lerp1Val, lerp2Val, relPosy);
 
+
+			newAllPixelInfo[index].density = lerp3Val;
+		}
+	}
+
+	this->allPixelInfo = std::move(newAllPixelInfo);
+}
+void window::addVectionVel() {
+	std::vector<pixelInfo> newAllPixelInfo = this->allPixelInfo;
+
+	for (int x = 0; x < this->width; ++x) {
+		for (int y = 0; y < this->height; ++y) {
+
+			int index = x + y * this->width;
+
+			float xFloat = this->allPixelInfo[index].velocity.x;
+			float yFloat = this->allPixelInfo[index].velocity.y;
+
+			float xBacktrace = x + xFloat;
+			float yBacktrace = y + yFloat;
+
+			int xNewPosfloor = std::clamp(static_cast<int>(std::floor(xBacktrace)), 0, this->width - 2);
+			int yNewPosfloor = std::clamp(static_cast<int>(std::floor(yBacktrace)), 0, this->height - 2);
+
+			int xNewPosceil = xNewPosfloor + 1;
+			int yNewPosceil = yNewPosfloor + 1;
+
+			float relPosx = xBacktrace - xNewPosfloor;
+			float relPosy = yBacktrace - yNewPosfloor;
+
+			int newIndexfloor = yNewPosfloor * this->width + xNewPosfloor;
+			int newIndexfloorX = yNewPosfloor * this->width + xNewPosceil;
+			int newIndexfloorY = yNewPosceil * this->width + xNewPosfloor;
+			int newIndexfloorXY = yNewPosceil * this->width + xNewPosceil;
+
 			vec2 lerp1Vel = {
 				std::lerp(this->allPixelInfo[newIndexfloor].velocity.x, this->allPixelInfo[newIndexfloorX].velocity.x, relPosx),
 				std::lerp(this->allPixelInfo[newIndexfloor].velocity.y, this->allPixelInfo[newIndexfloorX].velocity.y, relPosx)
@@ -486,7 +530,6 @@ void window::addVection() {
 				std::lerp(lerp1Vel.y, lerp2Vel.y, relPosy)
 			};
 
-			newAllPixelInfo[index].density = lerp3Val;
 			newAllPixelInfo[index].velocity = lerp3Vel;
 		}
 	}

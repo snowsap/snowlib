@@ -22,7 +22,7 @@ protected:
 	unsigned int vao;
 	unsigned int textureID;
 	float constantOfViscosity = 1;
-	int targetFrameRate = 60;
+	int targetFrameRate = 1000;
 	int halfSize = 5;
 
 
@@ -46,7 +46,7 @@ protected:
 
 	struct pixelInfo {
 		float density = 1;
-		vec2 velocity = {0.0f, 5.0f};
+		vec2 velocity = {0.5f, 0.0f};
 	};
 
 	enum accessPixelEnum {
@@ -64,7 +64,7 @@ protected:
 	};
 	
 	
-	std::vector<pixelInfo> allPixelInfo{ pixelInfo{0.25, {0, 0}} };
+	std::vector<pixelInfo> allPixelInfo{ pixelInfo{0.25, {0.5, 0}} };
 	vec2 mousePos{0,0};
 	int totalPixelAmount;
 
@@ -133,7 +133,11 @@ private:
 
 	void solveHelmholtzEquation();
 
-	float accessPixel(accessPixelEnum pixelDirection, uint16_t referencePixel, pixelInfoEnum accessValue, std::vector<pixelInfo>* pixelArray);
+	float accessPixel(accessPixelEnum pixelDirection, int referencePixel, pixelInfoEnum accessValue, std::vector<pixelInfo>* pixelArray);
 
 	float approxTheDiff(float x0, float x2, float y0, float y1, float k, float oldTarg);
+
+	void addVectionVel();
+
+
 };
