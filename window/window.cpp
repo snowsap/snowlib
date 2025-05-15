@@ -182,6 +182,8 @@ void window::screenCover() {
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 
+	this->totalPixelAmount = this->height * this->width;
+	this->allPixelInfo.resize(totalPixelAmount, pixelInfo{});
 
 	initTestPixels();  
 	glGenTextures(1, &textureID);
@@ -198,8 +200,7 @@ void window::screenCover() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	this->totalPixelAmount = this->height * this->width;
-	this->allPixelInfo.resize(totalPixelAmount, pixelInfo{});
+
 
 	glBindVertexArray(0);
 }
@@ -329,6 +330,7 @@ void window::mousePointerAddVelocity() {
 		static_cast<float>(mousePos.x - xPos),
 		static_cast<float>(mousePos.y - yPos)
 	};
+	if (xPos < 30 || xPos > this->width + 30 || yPos < 30 || yPos > this->height - 30) { return; }
 
 	for (int y = -this->halfSize; y <= this->halfSize; ++y) {
 		for (int x = -this->halfSize; x <= this->halfSize; ++x) {
@@ -487,6 +489,7 @@ void window::addVection() {
 
 	this->allPixelInfo = std::move(newAllPixelInfo);
 }
+
 void window::addVectionVel() {
 	std::vector<pixelInfo> newAllPixelInfo = this->allPixelInfo;
 
