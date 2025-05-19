@@ -1,7 +1,6 @@
 #include "render/render.h"
 #include "chrono"
 #include "unordered_set"
-#include "matrixOperations/matrixOp.h"
 
 class window {
 
@@ -23,7 +22,8 @@ protected:
 	unsigned int textureID;
 	float constantOfViscosity = 1;
 	int targetFrameRate = 1000;
-	int halfSize = 5;
+	int halfSize = 10;
+	float energyLost = 0.98;
 
 
 	struct vec2 {
@@ -46,7 +46,14 @@ protected:
 
 	struct pixelInfo {
 		float density = 1;
-		vec2 velocity = {0.5f, 0.0f};
+		vec2 velocity = {0.0f, 0.0f};
+	};
+
+	enum lerp {
+		xV = 1,
+		yV = 2,
+		zV = 3, 
+		aV = 4
 	};
 
 	enum accessPixelEnum {
@@ -64,7 +71,7 @@ protected:
 	};
 	
 	
-	std::vector<pixelInfo> allPixelInfo{ pixelInfo{0.25, {0.5, 0}} };
+	std::vector<pixelInfo> allPixelInfo{ pixelInfo{1, {0.0, 0.0}} };
 	vec2 mousePos{0,0};
 	int totalPixelAmount;
 
@@ -72,7 +79,7 @@ public:
 
 	std::chrono::duration<double, std::milli> frameDuration = std::chrono::duration<double, std::milli>(1000.0 / 60);
 	std::chrono::steady_clock::time_point previousTime = std::chrono::high_resolution_clock::now();
-
+	float deltaTime;
 	std::vector<unsigned char> pixels{0};
 	/**
 	 * @param width Width of the window.
@@ -131,13 +138,19 @@ private:
 
 	void flipImageVertically(int width, int height);
 
-	void solveHelmholtzEquation();
-
-	float accessPixel(accessPixelEnum pixelDirection, int referencePixel, pixelInfoEnum accessValue, std::vector<pixelInfo>* pixelArray);
+	float accessPixel(accessPixelEnum pixelDirection, int referencePixel, pixelInfoEnum accessValue, std::vector<pixelInfo>* pixelArray, float invReturnValue = -1);
+	float accessPixel(accessPixelEnum pixelDirection, int referencePixel, std::vector<float>* pixelArray, float invReturnValue);
 
 	float approxTheDiff(float x0, float x2, float y0, float y1, float k, float oldTarg);
+	float approxTheDiff(float x0, float x2, float y0, float y1, float oldTarg);
 
 	void addVectionVel();
+
+	void curlMaintainer();
+
+	void extendVelocity();
+
+	void project();
 
 
 };
