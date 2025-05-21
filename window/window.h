@@ -20,10 +20,10 @@ protected:
 	unsigned int shaderProgram;
 	unsigned int vao;
 	unsigned int textureID;
-	float constantOfViscosity = 1;
+	float constantOfViscosity = 0.5;
 	int targetFrameRate = 1000;
 	int halfSize = 10;
-	float energyLost = 0.98;
+	float energyLost = 1;
 
 
 	struct vec2 {
@@ -146,11 +146,9 @@ private:
 
 	void addVectionVel();
 
-	void curlMaintainer();
+	void projectVel();
 
 	void extendVelocity();
-
-	void project();
 
 
 };

@@ -107,23 +107,26 @@ void window::renderScreen() {
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	auto elapsedTime = currentTime - this->previousTime;
 	this->deltaTime = ((std::chrono::duration_cast<chrono::milliseconds>(elapsedTime)).count());
-	deltaTime = deltaTime / 100;
+	deltaTime = deltaTime / 1000;
 	this->previousTime = std::chrono::high_resolution_clock::now();
 
 
 	glUseProgram(this->shaderProgram);
 	glUniform1i(glGetUniformLocation(this->shaderProgram, "textureSampler"), 0);
 
+
+
+
+	this->mousePointerAddVelocity();
+	this->projectVel();
+	this->addVectionVel();
+	this->diffusion();
+	this->addVection();
+	this->mapDensityToPx();
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	this->mousePointerAddVelocity();
-	this->diffusion();
-	this->extendVelocity();
-	this->addVection();
-	this->addVectionVel();
-	this->diffusion();
-	this->mapDensityToPx();
+
 
 	glBindTexture(GL_TEXTURE_2D, this->textureID);
 	glActiveTexture(GL_TEXTURE0);
@@ -275,16 +278,6 @@ float window::approxTheDiff(float x0, float x2, float y0, float y1, float k, flo
 	return (oldTarg + k * (x0 + x2 + y0 + y1)) / (1 + numberOfVars * k);
 }
 
-float window::approxTheDiff(float x0, float x2, float y0, float y1, float oldTarg) {
-	int numberOfVars = 4;
-	if (x0 == -1) { numberOfVars = numberOfVars - 1; x0 = 0; }
-	if (x2 == -1) { numberOfVars = numberOfVars - 1; x2 = 0; }
-	if (y0 == -1) { numberOfVars = numberOfVars - 1; y0 = 0; }
-	if (y1 == -1) { numberOfVars = numberOfVars - 1; y1 = 0; }
-
-	return ((x0 + x2 + y0 + y1) - oldTarg / (numberOfVars));
-}
-
 void window::diffusion() {
 	std::vector<pixelInfo> newAllPixelInfo = this->allPixelInfo;
 	std::vector<pixelInfo> oldPixelInfo = this->allPixelInfo;
@@ -292,7 +285,7 @@ void window::diffusion() {
 	for (int z = 0; z < this->totalPixelAmount; ++z) {
 		newAllPixelInfo[z].density = 0;
 	}
-	for (int a = 0; a < 10; ++a) {
+	for (int a = 0; a < 20; ++a) {
 		for (int y = 0; y < this->height; ++y) {
 			for (int x = 0; x < this->width; ++x) {
 
@@ -320,7 +313,6 @@ void window::diffusion() {
 					this->accessPixel(none, i, velocityY, &oldPixelInfo));
 			}
 		}
-		swap(allPixelInfo, oldPixelInfo);
 	}
 	this->allPixelInfo = std::move(newAllPixelInfo);
 	return;
@@ -334,10 +326,10 @@ void window::mousePointerAddVelocity() {
 	int centerY = static_cast<int>(yPos);
 
 	vec2 mouseVelocity = {
-		static_cast<float>(mousePos.x - xPos) * 0.1,
-		static_cast<float>(mousePos.y - yPos) * 0.1
+		static_cast<float>(xPos - mousePos.x),
+		static_cast<float>(yPos - mousePos.y)
 	};
-	if (xPos < 30 || xPos > this->width - 30 || yPos < 30 || yPos > this->height - 30) { return; }
+	if (xPos < 30 || xPos > this->width + 30 || yPos < 30 || yPos > this->height - 30) { return; }
 
 	for (int y = -this->halfSize; y <= this->halfSize; ++y) {
 		for (int x = -this->halfSize; x <= this->halfSize; ++x) {
@@ -348,10 +340,11 @@ void window::mousePointerAddVelocity() {
 				continue;
 
 			int index = py * this->width + px;
-			newAllPixelInfo[index].velocity.x += mouseVelocity.x;
-			newAllPixelInfo[index].velocity.y += mouseVelocity.y;
+			newAllPixelInfo[index].velocity.x += mouseVelocity.x * 2;
+			newAllPixelInfo[index].velocity.y += mouseVelocity.y * 2;
 
-			newAllPixelInfo[index].density += 1;
+
+			newAllPixelInfo[index].density += 2;
 		}
 	}
 	this->mousePos.x = static_cast<float>(xPos);
@@ -365,8 +358,8 @@ void window::mapDensityToPx() {
 
 		float pixelDen = this->allPixelInfo[x].density;
 		unsigned char pixelRGB[4]{};
-		this->pixels[4 * x] = 1 / (1 + std::exp((-pixelDen + 5) / 2)) * 255;
-		this->pixels[4 * x + 1] = 1 / (1 + std::exp(pixelDen / 10)) * 255;
+		this->pixels[4 * x] = 1 / (1 + std::exp((-pixelDen + 30) / 2)) * 255;
+		this->pixels[4 * x + 1] = 1 / (1 + std::exp(pixelDen + 10 / 10)) * 255;
 		this->pixels[4 * x + 2] = 1 / (1 + std::exp(pixelDen / 2)) * 255;
 		this->pixels[4 * x + 3] = 255;
 	}
@@ -454,7 +447,7 @@ float window::accessPixel(accessPixelEnum pixelDirection, int referencePixel, st
 	switch (pixelDirection) {
 	case window::up:
 		if (referencePixel - this->width < 0) {
-			return -1;
+			return invReturnValue;
 		}
 
 		referencePixel = referencePixel - this->width;
@@ -463,7 +456,7 @@ float window::accessPixel(accessPixelEnum pixelDirection, int referencePixel, st
 
 	case window::left:
 		if (referencePixel % this->width == 0) {
-			return -1;
+			return invReturnValue;
 		}
 
 		referencePixel = referencePixel - 1;
@@ -472,7 +465,7 @@ float window::accessPixel(accessPixelEnum pixelDirection, int referencePixel, st
 
 	case window::right:
 		if (referencePixel % this->width == this->width - 1) {
-			return -1;
+			return invReturnValue;
 		}
 
 		referencePixel = referencePixel + 1;
@@ -480,8 +473,8 @@ float window::accessPixel(accessPixelEnum pixelDirection, int referencePixel, st
 
 	case window::down:
 		referencePixel = referencePixel + this->width;
-		if (referencePixel + this->width >= this->totalPixelAmount) {
-			return -1;
+		if (referencePixel + this->width >= this->totalPixelAmount - 1) {
+			return invReturnValue;
 		}
 		break;
 	case window::none:
@@ -530,21 +523,12 @@ void window::addVection() {
 				dy = this->allPixelInfo[newIndexfloorY].density;
 				dxy = this->allPixelInfo[newIndexfloorXY].density;
 
-				float weight = (1 - relPosx) * (1 - relPosy);
-				float weightX = relPosx * (1 - relPosy);
-				float weightY = (1 - relPosx) * relPosy;
-				float weightXY = relPosx * relPosy;
 
 				float lerp1Val = std::lerp(this->allPixelInfo[newIndexfloor].density, this->allPixelInfo[newIndexfloorX].density, relPosx);
 				float lerp2Val = std::lerp(this->allPixelInfo[newIndexfloorY].density, this->allPixelInfo[newIndexfloorXY].density, relPosx);
 				float lerp3Val = std::lerp(lerp1Val, lerp2Val, relPosy);
 
-				newAllPixelInfo[index].density += lerp3Val * 0.5;
-
-				newAllPixelInfo[newIndexfloor].density -= lerp3Val * weight * 0.5;
-				newAllPixelInfo[newIndexfloorX].density -= lerp3Val * weightX * 0.5;
-				newAllPixelInfo[newIndexfloorY].density -= lerp3Val * weightY * 0.5;
-				newAllPixelInfo[newIndexfloorXY].density -= lerp3Val * weightXY * 0.5;
+				newAllPixelInfo[index].density = lerp3Val;
 
 			}
 		}
@@ -597,10 +581,6 @@ void window::addVectionVel() {
 				jy = this->allPixelInfo[newIndexfloorY].velocity.y;
 				jxy = this->allPixelInfo[newIndexfloorXY].velocity.y;
 
-				float weight = (1 - relPosx) * (1 - relPosy);
-				float weightX = relPosx * (1 - relPosy);  
-				float weightY = (1 - relPosx) * relPosy;      
-				float weightXY = relPosx * relPosy;        
 
 
 				vec2 lerp1Val = {
@@ -618,157 +598,74 @@ void window::addVectionVel() {
 					std::lerp(lerp1Val.y, lerp2Val.y, relPosy)
 				};
 
-				newAllPixelInfo[index].velocity.x += lerp3Val.x * 0.5;
-				newAllPixelInfo[index].velocity.y += lerp3Val.y * 0.5;
-				
-				newAllPixelInfo[newIndexfloor].velocity.x -= lerp3Val.x * weight * 0.5;
-				newAllPixelInfo[newIndexfloorX].velocity.x -= lerp3Val.x * weightX * 0.5;
-				newAllPixelInfo[newIndexfloorY].velocity.x -= lerp3Val.x * weightY * 0.5;
-				newAllPixelInfo[newIndexfloorXY].velocity.x -= lerp3Val.x * weightXY * 0.5;
-
-				newAllPixelInfo[newIndexfloor].velocity.y -= lerp3Val.y * weight * 0.5;
-				newAllPixelInfo[newIndexfloorX].velocity.y -= lerp3Val.y * weightX * 0.5;
-				newAllPixelInfo[newIndexfloorY].velocity.y -= lerp3Val.y * weightY * 0.5;
-				newAllPixelInfo[newIndexfloorXY].velocity.y -= lerp3Val.y * weightXY * 0.5;
+				newAllPixelInfo[index].velocity.x = lerp3Val.x;
+				newAllPixelInfo[index].velocity.y = lerp3Val.y;
 			}
 		}
 	}
 
 	this->allPixelInfo = std::move(newAllPixelInfo);
 }
+void window::projectVel() {
+	std::vector<float> divergence(this->totalPixelAmount, 0.0f);
+	std::vector<float> pressure(this->totalPixelAmount, 0.0f);
+	std::vector<pixelInfo> result = this->allPixelInfo;
 
-void window::curlMaintainer() {
-	std::vector<float> tempPxInfo1;
-	tempPxInfo1.resize(this->totalPixelAmount, 0);
-	std::vector<float> tempPxInfo2;
-	tempPxInfo2.resize(this->totalPixelAmount, 0);
-	std::vector<pixelInfo> curlFree = this->allPixelInfo;
+	float N = float(this->width);
+	float h = 1.0f / N;
 	int index;
-	float x0, x1, x2, y0, y1, temp = 0;
+	float x0, x1, y0, y1, center;
 
-	for (int y = 0; y < this->height; ++y) {
-		for (int x = 0; x < this->width; ++x) {
-
+	for (int y = 1; y < this->height - 1; ++y) {
+		for (int x = 1; x < this->width - 1; ++x) {
 			index = x + y * this->width;
 
-			x1 = accessPixel(right, index, velocityX, &this->allPixelInfo);
-			x0 = accessPixel(left, index, velocityX, &this->allPixelInfo);
-			y0 = accessPixel(up, index, velocityY, &this->allPixelInfo);
-			y1 = accessPixel(down, index, velocityY, &this->allPixelInfo);
+			x1 = accessPixel(right, index, velocityX, &this->allPixelInfo, 0.0f);
+			x0 = accessPixel(left, index, velocityX, &this->allPixelInfo, 0.0f);
+			y1 = accessPixel(down, index, velocityY, &this->allPixelInfo, 0.0f);
+			y0 = accessPixel(up, index, velocityY, &this->allPixelInfo, 0.0f);
 
-			if (y0 < -1 && x1 < -1 && y1 < -1 && x0 < -1) {
-				temp = (x1 - x0 + y0 - y1);
-				tempPxInfo1[index] = temp / 2;
-			}
+			divergence[index] = -0.5f * h * (x1 - x0 + y1 - y0);
+			pressure[index] = 0.0f;
+		
+
 		}
 	}
 
-	for (int a = 0; a < 6; ++a) {
-		for (int y = 0; y < this->height; ++y) {
-			for (int x = 0; x < this->width; ++x) {
+	for (int iter = 0; iter < 20; ++iter) {
+		for (int y = 1; y < this->height - 1; ++y) {
+			for (int x = 1; x < this->width - 1; ++x) {
 				index = x + y * this->width;
 
-				x1 = accessPixel(right, index, &tempPxInfo2, -1);
-				x0 = accessPixel(left, index, &tempPxInfo2, -1);
-				y0 = accessPixel(up, index, &tempPxInfo2, -1);
-				y1 = accessPixel(down, index, &tempPxInfo2, -1);
-				x2 = accessPixel(none, index, &tempPxInfo1, -1);
+				x1 = accessPixel(right, index, &pressure, 0.0f);
+				x0 = accessPixel(left, index, &pressure, 0.0f);
+				y1 = accessPixel(down, index, &pressure, 0.0f);
+				y0 = accessPixel(up, index, &pressure, 0.0f);
+				center = divergence[index];
 
-				if (y0 < -1 && x1 < -1 && y1 < -1 && x0 < -1 && x2 < -1) {
-					tempPxInfo2[index] = approxTheDiff(
-						x0, x1, y0, y1, x2
-					);
-				}
+				float newPressure = (x0 + x1 + y0 + y1 + center) / 4.0f;
+				pressure[index] = newPressure;
+
 			}
 		}
 	}
-	
-	for (int y = 0; y < this->height; ++y) {
-		for (int x = 0; x < this->width; ++x) {
+	for (int y = 1; y < this->height - 1; ++y) {
+		for (int x = 1; x < this->width - 1; ++x) {
 			index = x + y * this->width;
-			
-			x0 = accessPixel(left, index, &tempPxInfo2, -1);
-			x1 = accessPixel(right, index, &tempPxInfo2, -1);
-			y0 = accessPixel(up, index, &tempPxInfo2, -1);
-			y1 = accessPixel(down, index, &tempPxInfo2, -1);
 
-			if (y0 < -1 && x1 < -1 && y1 < -1 && x0 < -1) {
-				curlFree[index].velocity.x =
-					this->allPixelInfo[index].velocity.x - (x1 - x0 / 2);
-				curlFree[index].velocity.y =
-					this->allPixelInfo[index].velocity.y - (y0 - y1 / 2);
+			x1 = accessPixel(right, index, &pressure, 0.0f);
+			x0 = accessPixel(left, index, &pressure, 0.0f);
+			y1 = accessPixel(down, index, &pressure, 0.0f);
+			y0 = accessPixel(up, index, &pressure, 0.0f);
 
-			}
+			float vx = this->allPixelInfo[index].velocity.x - 0.5f * N * (x1 - x0);
+			float vy = this->allPixelInfo[index].velocity.y - 0.5f * N * (y1 - y0);
 
+			result[index].velocity.x = vx;
+			result[index].velocity.y = vy;
 		}
 	}
-	this->allPixelInfo = std::move(curlFree);
 
-	return;
+	this->allPixelInfo = std::move(result);
 }
 
-
-
-void window::extendVelocity() {
-	std::vector<pixelInfo> newAllPixelInfo = this->allPixelInfo;
-	int index = 0;
-	vec2 velocity;
-	vec2 zeroV{0, 0};
-	vec2 newPos;
-	int newIndex = 0;
-	for (int y = 2; y < this->height - 1; ++y) {
-		for (int x = 2; x < this->width - 1; ++x) {
-			
-			index = x + y * this->width;
-			
-			velocity = newAllPixelInfo[index].velocity;
-			
-			newPos.x = std::round(( - velocity.x * this->deltaTime) + x);
-			newPos.y = std::round(( - velocity.y * this->deltaTime) + y);
-			
-			if ((newPos.x < this->width - 1 && newPos.x > 1) && (newPos.y < this->height - 1 && newPos.y > 1)) {
-				newIndex = std::round(newPos.x + newPos.y * this->width);
-				newAllPixelInfo[newIndex].velocity.x += velocity.x * this->energyLost;
-				newAllPixelInfo[newIndex].velocity.y += velocity.y * this->energyLost;
-				newAllPixelInfo[index].velocity.x -= velocity.x;
-				newAllPixelInfo[index].velocity.y -= velocity.y;
-			}
-			else {
-				newAllPixelInfo[index].velocity = zeroV;
-			}
-		}
-	}
-
-	this->allPixelInfo = std::move(newAllPixelInfo);
-	return;
-}
-
-void window::project() {
-	int i, j, k;
-	float h;
-	h = 1.0 / N;
-	for (i = 1; i <= N; i++) {
-		for (j = 1; j <= N; j++) {
-			div[IX(i, j)] = -0.5 * h * (u[IX(i + 1, j)] - u[IX(i - 1, j)] +
-				v[IX(i, j + 1)] - v[IX(i, j - 1)]);
-			p[IX(i, j)] = 0;
-		}
-	}
-	set_bnd(N, 0, div); set_bnd(N, 0, p);
-	for (k = 0; k < 20; k++) {
-		for (i = 1; i <= N; i++) {
-			for (j = 1; j <= N; j++) {
-				p[IX(i, j)] = (div[IX(i, j)] + p[IX(i - 1, j)] + p[IX(i + 1, j)] +
-					p[IX(i, j - 1)] + p[IX(i, j + 1)]) / 4;
-			}
-		}
-		set_bnd(N, 0, p);
-	}
-	for (i = 1; i <= N; i++) {
-		for (j = 1; j <= N; j++) {
-			u[IX(i, j)] -= 0.5 * (p[IX(i + 1, j)] - p[IX(i - 1, j)]) / h;
-			v[IX(i, j)] -= 0.5 * (p[IX(i, j + 1)] - p[IX(i, j - 1)]) / h;
-		}
-	}
-	set_bnd(N, 1, u); set_bnd(N, 2, v);
-}
