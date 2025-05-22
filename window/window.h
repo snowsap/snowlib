@@ -1,6 +1,12 @@
-#include "render/render.h"
 #include "chrono"
 #include "unordered_set"
+#include "glad/glad.h"
+#include "GLFW/glfw3.h"
+#include "iostream"
+#include "fstream"
+#include "sstream"
+#include "vector"
+#include "array"
 
 class window {
 
@@ -16,7 +22,6 @@ protected:
 	bool windowDecorated;
 	GLFWwindow* windowInstance;
 	int displayNumber = 0;
-	render renderInstance;
 	unsigned int shaderProgram;
 	unsigned int vao;
 	unsigned int textureID;
