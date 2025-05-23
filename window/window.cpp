@@ -345,7 +345,7 @@ void window::mousePointerAddVelocity() {
 			newAllPixelInfo[index].velocity.y += mouseVelocity.y * 2;
 
 
-			newAllPixelInfo[index].density += 2;
+			newAllPixelInfo[index].density += 4;
 		}
 	}
 	this->mousePos.x = static_cast<float>(xPos);
@@ -359,9 +359,9 @@ void window::mapDensityToPx() {
 
 		float pixelDen = this->allPixelInfo[x].density;
 		unsigned char pixelRGB[4]{};
-		this->pixels[4 * x] = 1 / (1 + std::exp((-pixelDen + 30) / 2)) * 255;
-		this->pixels[4 * x + 1] = 1 / (1 + std::exp(pixelDen + 10 / 10)) * 255;
-		this->pixels[4 * x + 2] = 1 / (1 + std::exp(pixelDen / 2)) * 255;
+		this->pixels[4 * x] = 1 / (1 + std::exp((-pixelDen + 20) / 5)) * 255;
+		this->pixels[4 * x + 1] = 1 / (1 + std::exp( pixelDen + 45/ 5)) * 255;
+		this->pixels[4 * x + 2] = 1 / (1 + std::exp(pixelDen + 10 / 5)) * 255;
 		this->pixels[4 * x + 3] = 255;
 	}
 	this->flipImageVertically(this->width, this->height);
