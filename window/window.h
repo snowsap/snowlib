@@ -28,7 +28,7 @@ protected:
 	float constantOfViscosity = 0.5;
 	int targetFrameRate = 1000;
 	int halfSize = 10;
-	float energyLost = 1;
+	float energyLost = 0.99;
 
 
 	struct vec2 {
@@ -153,7 +153,7 @@ private:
 
 	void projectVel();
 
-	void extendVelocity();
+	void reAssign(int height, int width);
 
 
 };

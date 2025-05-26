@@ -3,6 +3,7 @@
 #include <thread>
 #include <unordered_set>
 #include <cmath>
+#include <thread>
 
 using namespace std;
 
@@ -116,14 +117,14 @@ void window::renderScreen() {
 	glUniform1i(glGetUniformLocation(this->shaderProgram, "textureSampler"), 0);
 
 
-
-
 	this->mousePointerAddVelocity();
 	this->projectVel();
 	this->addVectionVel();
 	this->diffusion();
 	this->addVection();
 	this->mapDensityToPx();
+
+
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
@@ -199,7 +200,7 @@ void window::screenCover() {
 
 	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 
 
@@ -345,7 +346,7 @@ void window::mousePointerAddVelocity() {
 			newAllPixelInfo[index].velocity.y += mouseVelocity.y * 2;
 
 
-			newAllPixelInfo[index].density += 4;
+			newAllPixelInfo[index].density = 20 + newAllPixelInfo[index].density;
 		}
 	}
 	this->mousePos.x = static_cast<float>(xPos);
@@ -354,19 +355,35 @@ void window::mousePointerAddVelocity() {
 	this->allPixelInfo = std::move(newAllPixelInfo);
 }
 
+// this is a forever approaching 1
+float type1Eq(float x, float mag, float newY1) {
+	return 1 / (1 + std::exp((-x + newY1) / mag));
+}
+// this spikes at newY1
+float type2Eq(float x, float mag, float newY1) {
+	return std::exp(-std::abs((1 / mag) * (x - newY1)));
+}
+
+// this is forever approaching 0
+float type3Eq(float x, float mag, float newY1) {
+	return 1 / (1 + std::exp((x - newY1) / mag));
+}
+
 void window::mapDensityToPx() {
 	for (int x = 0; x < totalPixelAmount; ++x) {
 
 		float pixelDen = this->allPixelInfo[x].density;
 		unsigned char pixelRGB[4]{};
-		this->pixels[4 * x] = 1 / (1 + std::exp((-pixelDen + 20) / 5)) * 255;
-		this->pixels[4 * x + 1] = 1 / (1 + std::exp( pixelDen + 45/ 5)) * 255;
-		this->pixels[4 * x + 2] = 1 / (1 + std::exp(pixelDen + 10 / 5)) * 255;
-		this->pixels[4 * x + 3] = 255;
+		this->pixels[4 * x] = type2Eq(pixelDen, 5, 3) * 255;
+		this->pixels[4 * x + 1] = type2Eq(pixelDen, 20, 20) * 255;
+		this->pixels[4 * x + 2] = type2Eq(pixelDen, 20, 50) * 255;
+		this->pixels[4 * x + 3] = 255;	
 	}
 	this->flipImageVertically(this->width, this->height);
 	return;
 }
+
+
 
 void window::flipImageVertically(int width, int height) {
 	const int rowSize = width * 4;
@@ -529,7 +546,7 @@ void window::addVection() {
 				float lerp2Val = std::lerp(this->allPixelInfo[newIndexfloorY].density, this->allPixelInfo[newIndexfloorXY].density, relPosx);
 				float lerp3Val = std::lerp(lerp1Val, lerp2Val, relPosy);
 
-				newAllPixelInfo[index].density = lerp3Val;
+				newAllPixelInfo[index].density = lerp3Val * this->energyLost;
 
 			}
 		}
@@ -599,8 +616,8 @@ void window::addVectionVel() {
 					std::lerp(lerp1Val.y, lerp2Val.y, relPosy)
 				};
 
-				newAllPixelInfo[index].velocity.x = lerp3Val.x;
-				newAllPixelInfo[index].velocity.y = lerp3Val.y;
+				newAllPixelInfo[index].velocity.x = lerp3Val.x * this->energyLost;
+				newAllPixelInfo[index].velocity.y = lerp3Val.y * this->energyLost;
 			}
 		}
 	}
